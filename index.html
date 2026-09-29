@@ -158,13 +158,12 @@ table.stats tr.det td{background:#FFFBEF;font-size:12.5px;color:#8a6d3b}
       </div>
     </div>
     <div class="controls">
-      <button class="btn btn-blue" id="btnAnimate">▶ 动画演示</button>
       <button class="btn btn-primary" id="btnQuiz">✍ 试写练习</button>
-      <button class="btn btn-grey" id="btnReset">↻ 重置</button>
+      <button class="btn btn-blue" id="btnAnimate">▶ 看笔顺</button>
     </div>
     <div class="status">
       <div class="st"><span>当前字</span><b class="kai" id="stChar">—</b></div>
-      <div class="st"><span>模式</span><b id="stMode">演示</b></div>
+      <div class="st"><span>模式</span><b id="stMode">练习</b></div>
       <div class="st"><span>笔画数</span><b id="stStrokes">—</b></div>
       <div class="st"><span>错误次数</span><b id="stMistakes">0</b></div>
       <div class="st"><span>进度</span><b id="stProgress">0/0</b></div>
@@ -173,15 +172,14 @@ table.stats tr.det td{background:#FFFBEF;font-size:12.5px;color:#8a6d3b}
       <input id="customChar" maxlength="1" placeholder="自选一个字" />
       <button class="btn btn-blue sm" id="customBtn">加载该字</button>
     </div>
-    <div class="tip">💡 点「动画演示」看笔顺 → 点「试写练习」用手指/鼠标描写 → 写错 3 次会自动提示<br />
-      📶 内置本册「我会写」167 字；其他字（含自选字）会自动联网取回并保存在本机，之后断网也能用</div>
+    <div class="tip">✍ 按笔顺用手指或鼠标描写这个字；一时想不起来，就点「看笔顺」看一遍动画，看完自动回到试写；写错 3 次系统会自动给提示。</div>
   </div>
 
   <div class="free-row" id="lessonRow"></div>
   <div class="foot">
     <button class="link" id="teacherEntry">老师入口</button>
     <span style="color:#dfe6e9">·</span>
-    <span style="font-size:12px;color:#dfe6e9">2026-09-29 16:20</span>
+    <span style="font-size:12px;color:#dfe6e9">2026-09-29 16:34</span>
   </div>
 </div>
 
@@ -285,7 +283,7 @@ var DATA_B64 = ["eNpsvc+OLUtz3fcqB9+4G6j8n6VpT7cGPRXBR/DEHgoGRNiCJcoUbUAGAZOGDYi
 var LESSONS = [{"id":1,"name":"第一课","write":["一","二","五","口","人"]},{"id":2,"name":"第二课","write":["木","土","八","也","不","女","儿"]},{"id":3,"name":"第三课","write":["力","禾","几","七","个","可","去"]},{"id":4,"name":"第四课","write":["日","子","车","四","十","巴","士","只"]},{"id":5,"name":"第五课","write":["山","羊","毛","王","三","书","早","午"]},{"id":6,"name":"第六课","write":["田","刀","在","上","下","大","小","来"]},{"id":7,"name":"第七课","write":["开","火","关","两","长","广","多","少"]},{"id":8,"name":"第八课","write":["目","手","本","工","门","见","又","头"]},{"id":9,"name":"第九课","write":["牛","贝","六","支","九","什","么","文"]},{"id":10,"name":"第十课","write":["月","天","水","寸","正","反","白","古"]},{"id":11,"name":"第十一课","write":["后","左","右","中","间","面","的","同","学","画","回"]},{"id":12,"name":"第十二课","write":["包","半","元","吃","干","肉","虫","今","米","豆"]},{"id":13,"name":"第十三课","write":["用","牙","巾","以","要","东","西","雨","马","先","点"]},{"id":14,"name":"第十四课","write":["是","皮","衣","和","里","尺","还","自","己","好"]},{"id":15,"name":"第十五课","write":["生","果","汁","买","斤","它","办","法","看"]},{"id":16,"name":"第十六课","write":["父","母","她","他","会","你","们","爸","妈","打"]},{"id":17,"name":"第十七课","write":["昨","明","给","快","乐","没","有","这","老","师","每"]},{"id":18,"name":"第十八课","write":["爪","尖","气","玩","我","弟","妹","站","叫","再"]},{"id":19,"name":"第十九课","write":["公","园","姐","哥","习","起","到","高","兴","心"]}];
 var CFG = {"url":"https://p1shizidaren-default-rtdb.asia-southeast1.firebasedatabase.app","apiKey":"AIzaSyCTwb13RNHUVQ3LGpP9m3WacGtGRPpaOEY"};
 var N_BUILTIN = 167;
-var BUILT_AT = '2026-09-29 16:20';
+var BUILT_AT = '2026-09-29 16:34';
 
 /* ============================================================
    状态与常量
@@ -479,7 +477,7 @@ function createWriter(ch){
   lo.style.display = 'block';
   lo.style.color = '#b2bec3';
   lo.textContent = '加载中…';
-  txt('stChar', ch); txt('stMode', '演示'); txt('stStrokes', '—');
+  txt('stChar', ch); txt('stMode', '练习'); txt('stStrokes', '—');
   txt('stMistakes', '0'); txt('stProgress', '0/0');
   mistakes = 0; doneStrokes = 0; strokeTotal = 0;
   if(writer){ try{ writer.hide(); }catch(e){} writer = null; }
@@ -516,7 +514,7 @@ function createWriter(ch){
       if(!writer) return;
       setTimeout(function(){
         if(VIEW !== 'student' || !writer) return;
-        try{ writer.animateCharacter(); }catch(e){}
+        startQuiz();          /* 默认直接进入试写练习，「看笔顺」只在学生需要帮助时点 */
       }, 120);
     }
   });
@@ -1053,17 +1051,32 @@ function teacherLogin(){
 }
 
 /* ============================================================
+   学生求助：看一遍笔顺动画，动画结束自动回到试写
+   ============================================================ */
+function showHelp(){
+  if(!writer) return;
+  $('cel').classList.remove('show');
+  txt('stMode', '看笔顺');
+  var myChar = curChar;
+  try{ if(writer.cancelQuiz) writer.cancelQuiz(); }catch(e){}
+  var back = function(){
+    if(VIEW !== 'student' || !writer || curChar !== myChar) return;
+    if($('stMode').textContent === '看笔顺') startQuiz();
+  };
+  try{
+    writer.showCharacter();
+    writer.animateCharacter({ onComplete: back });
+  }catch(e){ back(); }
+  /* 兜底：若该版本不回调 onComplete，动画时长过后强制回到试写 */
+  setTimeout(back, Math.max(2000, (strokeTotal || 8) * 700 + 800));
+}
+
+/* ============================================================
    事件绑定
    ============================================================ */
 function bindEvents(){
-  $('btnAnimate').onclick = function(){
-    if(!writer) return;
-    $('cel').classList.remove('show');
-    txt('stMode', '演示');
-    try{ writer.showCharacter(); writer.animateCharacter(); }catch(e){}
-  };
+  $('btnAnimate').onclick = showHelp;
   $('btnQuiz').onclick = startQuiz;
-  $('btnReset').onclick = function(){ createWriter(curChar); };
   $('customBtn').onclick = function(){
     var ch = ($('customChar').value || '').trim();
     if(!hanziOnly(ch)){ notify('请输入一个汉字'); return; }
