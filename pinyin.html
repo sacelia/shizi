@@ -59,7 +59,9 @@
   .opt{position:relative;cursor:pointer;font-family:inherit;border:2px solid #dbe4ee;background:#fff;
        border-radius:16px;padding:18px 8px;font-size:22px;font-weight:700;color:var(--ink);
        transition:transform .12s,border-color .12s,background .12s}
-  .opt.pinyin{font-size:30px;font-family:"Georgia","Times New Roman",serif}
+  .opt.pinyin{font-size:30px;font-family:"Cambria","Georgia","Times New Roman","Microsoft YaHei","PingFang SC",serif}
+  /* ↑ 第三声 ǎ ě ǐ ǒ ǔ 属拉丁扩展B，Georgia 无此字形（会借位渲染导致声调偏离韵母上方）；
+     Cambria 全覆盖且整音节统一，找不到时依次回退 */
   .opt.char{font-size:52px;line-height:1.2}
   .opt:active{transform:scale(.97)}
   .opt.correct{background:#e6f8ee;border-color:var(--green);color:var(--green-d);animation:pop .45s ease}
@@ -309,7 +311,7 @@ var DUOYIN  = {"地":["de"],"的":["dì","dí"],"只":["zhī"],"什":["shí"],"�
 var MODE    = 'pinyin';            /* pinyin | listen */
 var TITLE   = '看字选拼音';
 var CFG     = {"url": "https://p1shizidaren-default-rtdb.asia-southeast1.firebasedatabase.app", "apiKey": "AIzaSyCTwb13RNHUVQ3LGpP9m3WacGtGRPpaOEY"};               /* {url, apiKey} —— 公开设计，非机密 */
-var BUILT   = '2026-09-29 18:22';
+var BUILT   = '2026-09-29 22:59';
 var ROUND_SIZE = 10;
 
 var DB = (CFG.url || '').replace(/\/+$/, '');
