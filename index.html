@@ -179,7 +179,7 @@ table.stats tr.det td{background:#FFFBEF;font-size:12.5px;color:#8a6d3b}
   <div class="foot">
     <button class="link" id="teacherEntry">老师入口</button>
     <span style="color:#dfe6e9">·</span>
-    <span style="font-size:12px;color:#dfe6e9">2026-09-29 16:34</span>
+    <span style="font-size:12px;color:#dfe6e9">2026-09-29 17:24</span>
   </div>
 </div>
 
@@ -283,7 +283,7 @@ var DATA_B64 = ["eNpsvc+OLUtz3fcqB9+4G6j8n6VpT7cGPRXBR/DEHgoGRNiCJcoUbUAGAZOGDYi
 var LESSONS = [{"id":1,"name":"第一课","write":["一","二","五","口","人"]},{"id":2,"name":"第二课","write":["木","土","八","也","不","女","儿"]},{"id":3,"name":"第三课","write":["力","禾","几","七","个","可","去"]},{"id":4,"name":"第四课","write":["日","子","车","四","十","巴","士","只"]},{"id":5,"name":"第五课","write":["山","羊","毛","王","三","书","早","午"]},{"id":6,"name":"第六课","write":["田","刀","在","上","下","大","小","来"]},{"id":7,"name":"第七课","write":["开","火","关","两","长","广","多","少"]},{"id":8,"name":"第八课","write":["目","手","本","工","门","见","又","头"]},{"id":9,"name":"第九课","write":["牛","贝","六","支","九","什","么","文"]},{"id":10,"name":"第十课","write":["月","天","水","寸","正","反","白","古"]},{"id":11,"name":"第十一课","write":["后","左","右","中","间","面","的","同","学","画","回"]},{"id":12,"name":"第十二课","write":["包","半","元","吃","干","肉","虫","今","米","豆"]},{"id":13,"name":"第十三课","write":["用","牙","巾","以","要","东","西","雨","马","先","点"]},{"id":14,"name":"第十四课","write":["是","皮","衣","和","里","尺","还","自","己","好"]},{"id":15,"name":"第十五课","write":["生","果","汁","买","斤","它","办","法","看"]},{"id":16,"name":"第十六课","write":["父","母","她","他","会","你","们","爸","妈","打"]},{"id":17,"name":"第十七课","write":["昨","明","给","快","乐","没","有","这","老","师","每"]},{"id":18,"name":"第十八课","write":["爪","尖","气","玩","我","弟","妹","站","叫","再"]},{"id":19,"name":"第十九课","write":["公","园","姐","哥","习","起","到","高","兴","心"]}];
 var CFG = {"url":"https://p1shizidaren-default-rtdb.asia-southeast1.firebasedatabase.app","apiKey":"AIzaSyCTwb13RNHUVQ3LGpP9m3WacGtGRPpaOEY"};
 var N_BUILTIN = 167;
-var BUILT_AT = '2026-09-29 16:34';
+var BUILT_AT = '2026-09-29 17:24';
 
 /* ============================================================
    状态与常量
@@ -299,6 +299,9 @@ var SEL = [], STAT_ROWS = [], STAT_RECS = [], LAST_STATS = null, openName = '';
 
 var LS_NAME = 'wb_stroke_name', LS_RT = 'wb_stroke_anon_rt',
     LS_CACHE = 'wb_stroke_cache_v1', LS_QUEUE = 'wb_stroke_queue';
+
+/* 每个练习各有独立作业：作业数据存在 /assignment/<模块名> 下（云端安全规则对子路径同样生效） */
+var ASG_PATH = 'assignment/stroke';
 
 var SZ = (function(){
   var w = Math.min(window.innerWidth - 72, window.innerHeight - 340);
@@ -724,12 +727,12 @@ function startCloud(){
 function fetchAssignment(cb){
   ensureToken(function(ok){
     if(!ok){ cb(null); return; }
-    dbReq('assignment', 'GET', undefined, anonToken, function(st, data){
+    dbReq(ASG_PATH, 'GET', undefined, anonToken, function(st, data){
       if(st === 401){
         anonToken = null;
         ensureToken(function(ok2){
           if(!ok2){ cb(null); return; }
-          dbReq('assignment', 'GET', undefined, anonToken, function(s2, d2){ cb(s2 === 200 ? d2 : null); });
+          dbReq(ASG_PATH, 'GET', undefined, anonToken, function(s2, d2){ cb(s2 === 200 ? d2 : null); });
         });
         return;
       }
@@ -888,7 +891,7 @@ function renderSel(){
 }
 function loadAssignmentInfo(){
   if(!teacherToken) return;
-  dbReq('assignment', 'GET', undefined, teacherToken, function(st, d){
+  dbReq(ASG_PATH, 'GET', undefined, teacherToken, function(st, d){
     if(st === 401){ teacherToken = null; showLogin('登录已过期，请重新登录'); return; }
     var box = $('asgInfo');
     if(st !== 200){ box.innerHTML = '读取失败（' + st + '）'; return; }
@@ -910,8 +913,8 @@ function publish(){
     .filter(function(s){ return !!s; });
   var seen = {}, rl = [];
   roster.forEach(function(n){ if(!seen[n]){ seen[n] = 1; rl.push(n); } });
-  var body = { id: String(Date.now()), name: name, chars: SEL.slice(), roster: rl, updatedAt: Date.now() };
-  dbReq('assignment', 'PUT', body, teacherToken, function(st){
+  var body = { id: String(Date.now()), name: name, chars: SEL.slice(), roster: rl, mode: 'stroke', updatedAt: Date.now() };
+  dbReq(ASG_PATH, 'PUT', body, teacherToken, function(st){
     if(st === 401){ teacherToken = null; showLogin('登录已过期，请重新登录'); return; }
     if(st !== 200){ tMsg('发布失败（' + st + '）'); return; }
     tMsg('已发布：《' + name + '》' + SEL.length + ' 字' + (rl.length ? ' · 名单 ' + rl.length + ' 人' : ''), true);
@@ -933,9 +936,9 @@ function endAssignment(){
     loadStats();
   };
   /* 首选 DELETE（Firebase 官方删除方式）；若服务器不接受则退化为 PUT null */
-  dbReq('assignment', 'DELETE', null, teacherToken, function(st){
+  dbReq(ASG_PATH, 'DELETE', null, teacherToken, function(st){
     if(st === 200 || st === 401 || st === 403){ done(st); return; }
-    dbReq('assignment', 'PUT', null, teacherToken, done);
+    dbReq(ASG_PATH, 'PUT', null, teacherToken, done);
   });
 }
 function loadStats(){
