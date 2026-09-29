@@ -1,0 +1,1260 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>看字选拼音 · 课堂练习</title>
+<style>
+  :root{
+    --ink:#2c3e50; --sub:#7f8c9b; --line:#e4e9ef;
+    --blue:#3a7bd5; --blue-d:#2a5fae; --purple:#7a4fd8;
+    --green:#27ae60; --green-d:#1e8449; --red:#e74c3c;
+    --amber:#f39c12;
+    --card:#ffffff; --page:#f2f6fb;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  body{margin:0;font-family:"Microsoft YaHei","PingFang SC","Hiragino Sans GB",sans-serif;
+       color:var(--ink);background:var(--page);line-height:1.6;font-size:16px}
+  .kai{font-family:"Kaiti SC","KaiTi","STKaiti","Microsoft YaHei",serif}
+  .hidden{display:none !important}
+  .wrap{max-width:720px;margin:0 auto;padding:14px 14px 40px}
+
+  /* ---------- 启动屏 ---------- */
+  .boot{position:fixed;inset:0;background:linear-gradient(160deg,#eaf2fe,#f7f0ff);
+        display:flex;align-items:center;justify-content:center;z-index:99;text-align:center}
+  .boot h1{margin:0 0 6px;font-size:26px}
+  .boot p{margin:0;color:var(--sub);font-size:14px}
+  .boot .spin{margin:18px auto 0;width:34px;height:34px;border:4px solid #d5e3f7;
+        border-top-color:var(--blue);border-radius:50%;animation:sp .9s linear infinite}
+  @keyframes sp{to{transform:rotate(360deg)}}
+
+  /* ---------- 顶部 ---------- */
+  .hd{background:#fff;border-radius:16px;padding:12px 16px;box-shadow:0 2px 8px rgba(40,60,90,.07);
+      display:flex;align-items:center;gap:12px;margin-bottom:12px}
+  .hd .who{flex:1;min-width:0}
+  .hd .nm{font-weight:700;font-size:17px}
+  .hd .sub{font-size:12.5px;color:var(--sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .hd .badge{background:#eaf2fe;color:var(--blue-d);border-radius:99px;padding:4px 12px;font-size:13px;font-weight:700;white-space:nowrap}
+
+  /* ---------- 卡片 ---------- */
+  .card{background:var(--card);border-radius:18px;padding:18px;box-shadow:0 2px 10px rgba(40,60,90,.07)}
+  .bar{height:10px;border-radius:99px;background:#e9eef5;overflow:hidden;margin-bottom:12px}
+  .bar > i{display:block;height:100%;width:0;background:linear-gradient(90deg,#69a7f2,#7a4fd8);
+           border-radius:99px;transition:width .35s ease}
+  .meta{display:flex;justify-content:space-between;font-size:14px;color:var(--sub);margin-bottom:6px}
+  .meta b{color:var(--ink)}
+
+  /* ---------- 题干 ---------- */
+  .stem{text-align:center;padding:10px 0 6px}
+  .bigchar{font-size:112px;line-height:1.15;font-weight:700;letter-spacing:4px}
+  .speak{display:inline-flex;align-items:center;gap:8px;border:0;cursor:pointer;font-family:inherit;
+         background:linear-gradient(180deg,#5a97ec,#3a7bd5);color:#fff;font-size:19px;font-weight:700;
+         padding:15px 34px;border-radius:99px;box-shadow:0 4px 12px rgba(58,123,213,.32)}
+  .speak:active{transform:translateY(1px)}
+  .speak.big{font-size:22px;padding:20px 46px}
+  .ask{font-size:15px;color:var(--sub);margin-top:10px}
+
+  /* ---------- 选项 ---------- */
+  .opts{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:16px}
+  .opt{position:relative;cursor:pointer;font-family:inherit;border:2px solid #dbe4ee;background:#fff;
+       border-radius:16px;padding:18px 8px;font-size:22px;font-weight:700;color:var(--ink);
+       transition:transform .12s,border-color .12s,background .12s}
+  .opt.pinyin{font-size:30px;font-family:"Georgia","Times New Roman",serif}
+  .opt.char{font-size:52px;line-height:1.2}
+  .opt:active{transform:scale(.97)}
+  .opt.correct{background:#e6f8ee;border-color:var(--green);color:var(--green-d);animation:pop .45s ease}
+  .opt.wrong{background:#fdecea;border-color:var(--red);color:var(--red);animation:shake .4s ease}
+  .opt.reveal{border-color:var(--amber);box-shadow:0 0 0 4px #fdf0d5}
+  .opt[disabled]{cursor:default;opacity:.85}
+  @keyframes pop{0%{transform:scale(1)}45%{transform:scale(1.09)}100%{transform:scale(1)}}
+  @keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-7px)}75%{transform:translateX(7px)}}
+
+  .hintline{min-height:30px;text-align:center;font-size:16px;font-weight:700;margin-top:12px}
+  .hintline .ok{color:var(--green-d)}
+  .hintline .no{color:var(--red)}
+
+  /* ---------- 烟花 ---------- */
+  .fw{position:absolute;inset:0;pointer-events:none;overflow:visible}
+  .fw i{position:absolute;width:9px;height:9px;border-radius:50%;opacity:0;
+        animation:fwgo .9s ease-out forwards}
+  @keyframes fwgo{0%{opacity:1;transform:translate(0,0) scale(1)}
+                  100%{opacity:0;transform:translate(var(--dx),var(--dy)) scale(.3)}}
+
+  /* ---------- toast / 提示条 ---------- */
+  .toast{position:fixed;left:50%;top:16px;transform:translate(-50%,-140%);background:#2c3e50;color:#fff;
+         border-radius:99px;padding:10px 22px;font-size:16px;font-weight:700;z-index:120;
+         transition:transform .3s ease;box-shadow:0 6px 18px rgba(0,0,0,.22)}
+  .toast.on{transform:translate(-50%,0)}
+  .notify{position:fixed;left:50%;bottom:18px;transform:translate(-50%,180%);background:#f39c12;color:#fff;
+          border-radius:14px;padding:13px 22px;font-size:16px;font-weight:700;z-index:130;cursor:pointer;
+          box-shadow:0 8px 22px rgba(0,0,0,.22);transition:transform .32s ease;max-width:92vw;text-align:center}
+  .notify.on{transform:translate(-50%,0)}
+
+  /* ---------- 等待层 ---------- */
+  .wait{background:#fff;border-radius:18px;padding:40px 22px;text-align:center;
+        box-shadow:0 2px 10px rgba(40,60,90,.07)}
+  .wait .em{font-size:58px;line-height:1}
+  .wait h2{margin:12px 0 6px;font-size:21px}
+  .wait p{margin:6px 0;color:var(--sub);font-size:14.5px}
+
+  /* ---------- 结算 ---------- */
+  .round{background:#fff;border-radius:18px;padding:28px 20px;text-align:center;
+         box-shadow:0 2px 10px rgba(40,60,90,.07)}
+  .round .em{font-size:56px}
+  .round h2{margin:6px 0 10px;font-size:22px}
+  .round .sc{font-size:40px;font-weight:800;color:var(--purple)}
+  .round .st{font-size:22px;letter-spacing:2px;margin:6px 0}
+  .stats{display:flex;justify-content:center;gap:26px;margin:16px 0 4px;font-size:15px;color:var(--sub)}
+  .stats b{display:block;font-size:22px;color:var(--ink)}
+  .miss{margin:18px 0 4px;font-size:15px;color:var(--sub)}
+  .miss .c{display:inline-block;margin:4px 5px 0;padding:4px 13px;border-radius:10px;background:#fdecea;
+           color:var(--red);font-size:22px;font-weight:700}
+  .miss .none{color:var(--green-d);font-weight:700;font-size:16px}
+
+  /* ---------- 按钮 ---------- */
+  .btn{border:0;cursor:pointer;font-family:inherit;font-weight:700;border-radius:12px;padding:12px 22px;
+       font-size:16px;transition:transform .1s}
+  .btn:active{transform:translateY(1px)}
+  .btn-p{background:linear-gradient(180deg,#5a97ec,#3a7bd5);color:#fff;box-shadow:0 3px 10px rgba(58,123,213,.3)}
+  .btn-g{background:#eef2f7;color:#43536b}
+  .btn-d{background:#fdecea;color:#c0392b}
+  .btn.sm{padding:8px 14px;font-size:14px;border-radius:10px}
+  .btn[disabled]{opacity:.5;cursor:default}
+  .row{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:20px}
+
+  /* ---------- 弹层 ---------- */
+  .modal{position:fixed;inset:0;background:rgba(30,42,58,.5);display:flex;align-items:center;
+         justify-content:center;padding:18px;z-index:110}
+  .modal .box{background:#fff;border-radius:20px;padding:26px 22px;width:100%;max-width:430px;
+              text-align:center;box-shadow:0 18px 40px rgba(0,0,0,.25)}
+  .modal h2{margin:0 0 6px;font-size:22px}
+  .modal .tip{color:var(--sub);font-size:14px;margin-bottom:14px}
+  .modal input{width:100%;font-family:inherit;font-size:22px;font-weight:700;text-align:center;
+               border:2px solid #dbe4ee;border-radius:14px;padding:12px;color:var(--ink)}
+  .modal input:focus{outline:0;border-color:var(--blue)}
+  .roster{display:flex;flex-wrap:wrap;gap:9px;justify-content:center;margin:0 0 14px}
+  .roster button{font-family:inherit;font-size:17px;font-weight:700;border:2px solid #dbe4ee;background:#fff;
+                 color:var(--ink);border-radius:12px;padding:9px 16px;cursor:pointer}
+  .roster button.on{background:#eaf2fe;border-color:var(--blue);color:var(--blue-d)}
+
+  /* ---------- 老师视图 ---------- */
+  .thead{display:flex;align-items:center;gap:12px;margin-bottom:12px}
+  .thead h1{font-size:21px;margin:0;flex:1}
+  .sec{background:#fff;border-radius:16px;padding:16px;margin-bottom:14px;
+       box-shadow:0 2px 8px rgba(40,60,90,.07)}
+  .sec h3{margin:0 0 10px;font-size:16px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .sec h3 .r{margin-left:auto;display:flex;gap:8px;flex-wrap:wrap}
+  .grid{display:flex;flex-wrap:wrap;gap:8px}
+  .lchip{font-family:inherit;font-size:14.5px;font-weight:700;border:2px solid #dbe4ee;background:#fff;
+         color:var(--ink);border-radius:11px;padding:8px 13px;cursor:pointer;display:flex;gap:7px;align-items:center}
+  .lchip small{color:var(--sub);font-weight:400;font-size:12px}
+  .lchip.on{background:#eaf2fe;border-color:var(--blue);color:var(--blue-d)}
+  .lchip.on small{color:var(--blue-d)}
+  .sellist{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;min-height:34px}
+  .schar{background:#f3eefe;border:1px solid #d9c9f8;color:#5b3fae;border-radius:10px;padding:4px 6px 4px 12px;
+         font-size:20px;font-weight:700;display:flex;align-items:center;gap:6px}
+  .schar span{cursor:pointer;font-size:15px;color:#8a6fd0}
+  .tin{width:100%;font-family:inherit;font-size:15px;border:2px solid #dbe4ee;border-radius:12px;
+       padding:11px 13px;color:var(--ink);margin-bottom:10px}
+  .tin:focus{outline:0;border-color:var(--blue)}
+  textarea.tin{min-height:88px;resize:vertical;line-height:1.7}
+  .urlbox{background:#f7faff;border:1px dashed #b9d2f0;border-radius:12px;padding:12px 14px;
+          font-size:15px;font-weight:700;color:var(--blue-d);word-break:break-all;cursor:pointer;margin-top:12px}
+  .hint{font-size:12.5px;color:var(--sub);margin-top:8px;line-height:1.65}
+  table.stat{width:100%;border-collapse:collapse;font-size:14.5px}
+  table.stat th,table.stat td{border-bottom:1px solid var(--line);padding:9px 6px;text-align:left}
+  table.stat th{color:var(--sub);font-weight:400;font-size:13px}
+  table.stat tr.rowc{cursor:pointer}
+  table.stat tr.rowc:hover{background:#f7faff}
+  .det{background:#f9fbfe;font-size:13.5px;color:#42536b;padding:10px 12px;border-radius:10px;line-height:1.9}
+  .empty{color:var(--sub);font-size:14.5px;text-align:center;padding:22px 0}
+  .tmsg{font-size:14px;font-weight:700;min-height:22px;color:var(--blue-d);margin-bottom:8px}
+  .tmsg.err{color:var(--red)}
+  .tmsg.ok{color:var(--green-d)}
+  .foot{margin-top:16px;text-align:center}
+  .foot .link{background:0;border:0;color:#aebecd;font-size:12.5px;cursor:pointer;text-decoration:underline;
+              font-family:inherit}
+  @media(max-width:520px){
+    .bigchar{font-size:88px}
+    .opt.char{font-size:44px}
+    .opts{gap:10px}
+  }
+  @media print{.foot{display:none}}
+</style>
+</head>
+<body class="mode-pinyin">
+
+<!-- ================= 启动屏 ================= -->
+<div id="boot" class="boot">
+  <div>
+    <h1>🧩 看字选拼音</h1>
+    <p>课堂练习 · 正在准备…</p>
+    <div class="spin"></div>
+  </div>
+</div>
+
+<!-- ================= 学生：等待老师布置作业 ================= -->
+<div id="viewWait" class="wrap hidden">
+  <div class="wait">
+    <div class="em">⏳</div>
+    <h2 id="waitTitle">等待老师布置作业</h2>
+    <p id="waitMsg">老师布置后，这一页会自动开始，你不用刷新。</p>
+    <p style="font-size:13px" id="waitTime"></p>
+    <div class="row">
+      <button class="btn btn-p" id="btnRecheck">立即检查</button>
+    </div>
+  </div>
+  <div class="foot">
+    <button class="link" id="teacherEntryWait">老师入口</button>
+  </div>
+</div>
+
+<!-- ================= 学生：答题 ================= -->
+<div id="viewQuiz" class="wrap hidden">
+  <div class="hd">
+    <div class="who">
+      <div class="nm" id="hdName">—</div>
+      <div class="sub" id="hdSub">—</div>
+    </div>
+    <div class="badge" id="hdCover">已练 0/0</div>
+  </div>
+  <div class="card" id="quizCard"></div>
+  <div class="foot">
+    <button class="link" id="teacherEntryQuiz">老师入口</button>
+  </div>
+</div>
+
+<!-- ================= 老师视图 ================= -->
+<div id="viewTeacher" class="wrap hidden">
+  <div class="thead">
+    <h1>👩‍🏫 老师端 · 看字选拼音</h1>
+    <button class="btn btn-g sm" id="backToStudent">返回学生页</button>
+  </div>
+
+  <div id="loginBox" class="sec">
+    <h3>登录（只有老师需要登录）</h3>
+    <input class="tin" id="tEmail" type="email" placeholder="老师邮箱（Firebase 中创建的账号）" autocomplete="username" />
+    <input class="tin" id="tPass" type="password" placeholder="密码" autocomplete="current-password" />
+    <div class="tmsg" id="tMsg"></div>
+    <div class="row" style="justify-content:flex-start;margin-top:4px">
+      <button class="btn btn-p" id="tLoginBtn">登录</button>
+    </div>
+    <div class="hint">密码只在登录时输入，不会保存在本页面、本机或任何文件里；关闭页面即退出登录。</div>
+  </div>
+
+  <div id="panel" class="hidden">
+    <div class="sec">
+      <h3>1. 选字（识读字，共 364 字）<span class="r">
+        <button class="btn btn-g sm" id="btnAll">全选本课</button>
+        <button class="btn btn-g sm" id="btnClear">清空</button>
+      </span></h3>
+      <div class="grid" id="lessonGrid"></div>
+      <div class="sellist" id="selList"></div>
+      <div class="hint">点课次可整课加入/移出；再点右侧已选栏里的 × 可单独去掉某个字。</div>
+    </div>
+
+    <div class="sec">
+      <h3>2. 作业信息</h3>
+      <input class="tin" id="asgName" placeholder="作业名，如：第3课 认读" />
+      <textarea class="tin" id="roster" placeholder="名单（可选，一行一个姓名）
+陈小明
+林小华"></textarea>
+      <div class="row" style="justify-content:flex-start;margin-top:0">
+        <button class="btn btn-p" id="btnPublish">发布作业</button>
+        <button class="btn btn-g" id="btnEnd">结束作业</button>
+      </div>
+      <div class="urlbox" id="urlBox">学生网址</div>
+      <div class="hint">把上面的网址给学生（可自行做成二维码）：学生打开 → 点自己的名字 → 开始答题，成绩自动回到这里。</div>
+      <div class="tmsg" id="asgInfo" style="margin-top:12px"></div>
+    </div>
+
+    <div class="sec">
+      <h3>3. 学生成绩（本模块）
+        <span class="r">
+          <button class="btn btn-g sm" id="btnRefresh">刷新</button>
+          <button class="btn btn-g sm" id="btnCsv">导出CSV</button>
+          <button class="btn btn-d sm" id="btnWipe">清空本模块成绩</button>
+        </span>
+      </h3>
+      <div id="stats" class="empty">载入中…</div>
+      <div class="hint">点某一行的姓名可展开该生的逐轮明细。清空只影响「看字选拼音」这一个模块，不影响其他练习。</div>
+    </div>
+  </div>
+</div>
+
+<!-- ================= 姓名层 ================= -->
+<div id="nameModal" class="modal hidden">
+  <div class="box">
+    <h2>请写上你的名字</h2>
+    <div class="tip" id="nameTip">老师要看看你练得怎么样</div>
+    <div class="roster" id="rosterBox"></div>
+    <input id="nameInput" placeholder="输入名字" maxlength="24" />
+    <div class="row">
+      <button class="btn btn-p" id="nameGo">开始练习</button>
+    </div>
+    <div class="hint">名字只用于老师查看练习情况，不需要密码。</div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+<div class="notify" id="notify"></div>
+
+<script>
+/* ==========================================================================
+   数据与配置（本页自带，无需联网即可出题；云端只用于作业与成绩）
+   ========================================================================== */
+var LESSONS = [{"id":1,"name":"第一课","rec":["衣","鱼","雨","一","二","五","耳","牙","口","人"]},{"id":2,"name":"第二课","rec":["木","土","马","八","巴","你","我","也","他","弟","不","爸","她","妈","的","父","母","女","儿"]},{"id":3,"name":"第三课","rec":["力","河","禾","立","米","合","气","和","哥","几","七","了","个","句","可","以","吗","去"]},{"id":4,"name":"第四课","rec":["日","石","子","字","车","四","十","士","只","把","尺","是","书","出","自","己","它","吃"]},{"id":5,"name":"第五课","rec":["山","羊","毛","草","太","阳","王","三","伞","包","老","师","早","安","半","午","奶","玩","具"]},{"id":6,"name":"第六课","rec":["鸟","竹","田","苗","象","家","刀","网","在","里","上","下","大","小","来","哭","笑","男","爷","姐"]},{"id":7,"name":"第七课","rec":["果","开","瓜","火","花","叶","面","关","朵","两","片","画","笔","长","广","多","少","床"]},{"id":8,"name":"第八课","rec":["目","舌","手","足","本","工","厂","走","跑","飞","妹","门","看","见","问","又","头","们","身","体"]},{"id":9,"name":"第九课","rec":["牛","井","虫","弓","贝","心","豆","六","支","条","九","粒","今","什","么","华","文","点","说","语"]},{"id":10,"name":"第十课","rec":["月","天","地","风","雷","电","水","寸","方","正","反","白","好","坏","对","古","旧","有","没","云"]},{"id":11,"name":"第十一课","rec":["甲","丁","前","后","左","右","中","间","边","同","学","朋","友","坐","高","发","直","起","回","周","末"]},{"id":12,"name":"第十二课","rec":["鸡","饭","鸭","元","饿","饱","饼","干","狗","喜","欢","肉","猫","采","歌","唱","青","菜","汤","蛋","香"]},{"id":13,"name":"第十三课","rec":["用","刷","巾","抹","洗","要","脸","放","冲","凉","东","西","到","先","请","很","泡","变","谢"]},{"id":14,"name":"第十四课","rec":["这","双","袜","那","皮","鞋","件","服","被","还","色","红","都","动","作","快","收","拾","穿","事","做"]},{"id":15,"name":"第十五课","rec":["甜","苦","臭","生","重","喝","甘","汁","买","斤","串","弯","选","最","抱","拿","办","法","圆","切","怎"]},{"id":16,"name":"第十六课","rec":["扫","户","桌","椅","兄","房","阿","叔","会","写","啊","完","业","躲","进","净","谁","打","听","声"]},{"id":17,"name":"第十七课","rec":["昨","晚","星","明","庆","祝","节","爱","给","国","乐","课","台","讲","故","每","童","因","为"]},{"id":18,"name":"第十八课","rec":["兔","尾","短","眼","睛","爪","尖","物","虎","狮","园","期","带","黑","站","叫","认","话","再","孩"]},{"id":19,"name":"第十九课","rec":["组","屋","公","校","场","商","店","梯","扶","常","球","步","图","习","伙","伴","游","拍","兴","戏"]}];
+var WORDS   = {"衣":{"p":"yī","w":"雨衣"},"鱼":{"p":"yú","w":"鱼儿"},"雨":{"p":"yǔ","w":"雨衣"},"一":{"p":"yī","w":"一张"},"二":{"p":"èr","w":"二月"},"五":{"p":"wǔ","w":"五个"},"耳":{"p":"ěr","w":"耳朵"},"牙":{"p":"yá","w":"牙痛"},"口":{"p":"kǒu","w":"口水"},"人":{"p":"rén","w":"一个人"},"木":{"p":"mù","w":"木马"},"土":{"p":"tǔ","w":"泥土"},"马":{"p":"mǎ","w":"木马"},"八":{"p":"bā","w":"八个"},"巴":{"p":"bā","w":"巴士"},"你":{"p":"nǐ","w":"你家"},"我":{"p":"wǒ","w":"我家"},"也":{"p":"yě","w":"也是"},"他":{"p":"tā","w":"他们"},"弟":{"p":"dì","w":"弟弟"},"不":{"p":"bù","w":"不高"},"爸":{"p":"bà","w":"爸爸"},"她":{"p":"tā","w":"她们"},"妈":{"p":"mā","w":"妈妈"},"的":{"p":"de","w":"我的"},"父":{"p":"fù","w":"父母"},"母":{"p":"mǔ","w":"父母"},"女":{"p":"nǚ","w":"女儿"},"儿":{"p":"ér","w":"女儿"},"力":{"p":"lì","w":"力气"},"河":{"p":"hé","w":"河里"},"禾":{"p":"hé","w":"禾苗"},"立":{"p":"lì","w":"站立"},"米":{"p":"mǐ","w":"一把米"},"合":{"p":"hé","w":"合唱"},"气":{"p":"qì","w":"力气"},"和":{"p":"hé","w":"大和小"},"哥":{"p":"gē","w":"哥哥"},"几":{"p":"jǐ","w":"几岁"},"七":{"p":"qī","w":"七岁"},"了":{"p":"le","w":"放学了"},"个":{"p":"gè","w":"几个"},"句":{"p":"jù","w":"句子"},"可":{"p":"kě","w":"可以"},"以":{"p":"yǐ","w":"可以"},"吗":{"p":"ma","w":"好吗"},"去":{"p":"qù","w":"出去"},"日":{"p":"rì","w":"日月"},"石":{"p":"shí","w":"石子"},"子":{"p":"zǐ","w":"石子"},"字":{"p":"zì","w":"写字"},"车":{"p":"chē","w":"汽车"},"四":{"p":"sì","w":"四头牛"},"十":{"p":"shí","w":"十个"},"士":{"p":"shì","w":"巴士"},"只":{"p":"zhǐ","w":"只有"},"把":{"p":"bǎ","w":"一把尺"},"尺":{"p":"chǐ","w":"一把尺"},"是":{"p":"shì","w":"不是"},"书":{"p":"shū","w":"读书"},"出":{"p":"chū","w":"出去"},"自":{"p":"zì","w":"自己"},"己":{"p":"jǐ","w":"自己"},"它":{"p":"tā","w":"它们"},"吃":{"p":"chī","w":"吃午餐"},"山":{"p":"shān","w":"山羊"},"羊":{"p":"yáng","w":"羊毛"},"毛":{"p":"máo","w":"羊毛"},"草":{"p":"cǎo","w":"一把草"},"太":{"p":"tài","w":"太阳"},"阳":{"p":"yáng","w":"太阳"},"王":{"p":"wáng","w":"王老师"},"三":{"p":"sān","w":"三只"},"伞":{"p":"sǎn","w":"一把伞"},"包":{"p":"bāo","w":"书包"},"老":{"p":"lǎo","w":"老师"},"师":{"p":"shī","w":"老师"},"早":{"p":"zǎo","w":"早安"},"安":{"p":"ān","w":"早安"},"半":{"p":"bàn","w":"八点半"},"午":{"p":"wǔ","w":"午安"},"奶":{"p":"nǎi","w":"爷爷奶奶"},"玩":{"p":"wán","w":"玩具"},"具":{"p":"jù","w":"玩具"},"鸟":{"p":"niǎo","w":"小鸟"},"竹":{"p":"zhú","w":"竹子"},"田":{"p":"tián","w":"田里"},"苗":{"p":"miáo","w":"禾苗"},"象":{"p":"xiàng","w":"大象"},"家":{"p":"jiā","w":"家里"},"刀":{"p":"dāo","w":"小刀"},"网":{"p":"wǎng","w":"上网"},"在":{"p":"zài","w":"现在"},"里":{"p":"lǐ","w":"山里"},"上":{"p":"shàng","w":"山上"},"下":{"p":"xià","w":"上和下"},"大":{"p":"dà","w":"大象"},"小":{"p":"xiǎo","w":"小孩"},"来":{"p":"lái","w":"来和去"},"哭":{"p":"kū","w":"哭和笑"},"笑":{"p":"xiào","w":"哭和笑"},"男":{"p":"nán","w":"男人"},"爷":{"p":"yé","w":"爷爷"},"姐":{"p":"jiě","w":"姐姐"},"果":{"p":"guǒ","w":"芒果"},"开":{"p":"kāi","w":"开门"},"瓜":{"p":"guā","w":"木瓜"},"火":{"p":"huǒ","w":"火苗"},"花":{"p":"huā","w":"红花"},"叶":{"p":"yè","w":"叶子"},"面":{"p":"miàn","w":"面条"},"关":{"p":"guān","w":"关门"},"朵":{"p":"duǒ","w":"一朵花"},"两":{"p":"liǎng","w":"两片"},"片":{"p":"piàn","w":"两片"},"画":{"p":"huà","w":"画画"},"笔":{"p":"bǐ","w":"画笔"},"长":{"p":"cháng","w":"长短"},"广":{"p":"guǎng","w":"广场"},"多":{"p":"duō","w":"很多"},"少":{"p":"shǎo","w":"多少"},"床":{"p":"chuáng","w":"起床"},"目":{"p":"mù","w":"目光"},"舌":{"p":"shé","w":"舌头"},"手":{"p":"shǒu","w":"洗手"},"足":{"p":"zú","w":"双足"},"本":{"p":"běn","w":"本子"},"工":{"p":"gōng","w":"工厂"},"厂":{"p":"chǎng","w":"工厂"},"走":{"p":"zǒu","w":"走路"},"跑":{"p":"pǎo","w":"跑步"},"飞":{"p":"fēi","w":"飞翔"},"妹":{"p":"mèi","w":"妹妹"},"门":{"p":"mén","w":"出门"},"看":{"p":"kàn","w":"看见"},"见":{"p":"jiàn","w":"看见"},"问":{"p":"wèn","w":"问好"},"又":{"p":"yòu","w":"又问"},"头":{"p":"tóu","w":"头痛"},"们":{"p":"men","w":"它们"},"身":{"p":"shēn","w":"身体"},"体":{"p":"tǐ","w":"身体"},"牛":{"p":"niú","w":"小牛"},"井":{"p":"jǐng","w":"三口井"},"虫":{"p":"chóng","w":"小虫"},"弓":{"p":"gōng","w":"弓箭"},"贝":{"p":"bèi","w":"贝壳"},"心":{"p":"xīn","w":"一颗心"},"豆":{"p":"dòu","w":"黄豆"},"六":{"p":"liù","w":"六支"},"支":{"p":"zhī","w":"六支"},"条":{"p":"tiáo","w":"八条"},"九":{"p":"jiǔ","w":"九点"},"粒":{"p":"lì","w":"十粒"},"今":{"p":"jīn","w":"今天"},"什":{"p":"shén","w":"什么"},"么":{"p":"me","w":"什么"},"华":{"p":"huá","w":"华文"},"文":{"p":"wén","w":"华文"},"点":{"p":"diǎn","w":"几点"},"说":{"p":"shuō","w":"说话"},"语":{"p":"yǔ","w":"华语"},"月":{"p":"yuè","w":"日月"},"天":{"p":"tiān","w":"白天"},"地":{"p":"dì","w":"天地"},"风":{"p":"fēng","w":"风儿"},"雷":{"p":"léi","w":"雷电"},"电":{"p":"diàn","w":"雷电"},"水":{"p":"shuǐ","w":"喝水"},"寸":{"p":"cùn","w":"尺寸"},"方":{"p":"fāng","w":"方向"},"正":{"p":"zhèng","w":"正反"},"反":{"p":"fǎn","w":"正反"},"白":{"p":"bái","w":"白云"},"好":{"p":"hǎo","w":"好坏"},"坏":{"p":"huài","w":"好坏"},"对":{"p":"duì","w":"对错"},"古":{"p":"gǔ","w":"古代"},"旧":{"p":"jiù","w":"新旧"},"有":{"p":"yǒu","w":"没有"},"没":{"p":"méi","w":"没有"},"云":{"p":"yún","w":"云朵"},"甲":{"p":"jiǎ","w":"甲组"},"丁":{"p":"dīng","w":"丁组"},"前":{"p":"qián","w":"前面"},"后":{"p":"hòu","w":"后面"},"左":{"p":"zuǒ","w":"左边"},"右":{"p":"yòu","w":"右边"},"中":{"p":"zhōng","w":"中间"},"间":{"p":"jiān","w":"中间"},"边":{"p":"biān","w":"左边"},"同":{"p":"tóng","w":"同学"},"学":{"p":"xué","w":"同学"},"朋":{"p":"péng","w":"朋友"},"友":{"p":"yǒu","w":"朋友"},"坐":{"p":"zuò","w":"坐下"},"高":{"p":"gāo","w":"高兴"},"发":{"p":"fā","w":"发现"},"直":{"p":"zhí","w":"直线"},"起":{"p":"qǐ","w":"一起"},"回":{"p":"huí","w":"回家"},"周":{"p":"zhōu","w":"周末"},"末":{"p":"mò","w":"周末"},"鸡":{"p":"jī","w":"鸡饭"},"饭":{"p":"fàn","w":"鸡饭"},"鸭":{"p":"yā","w":"鸭面"},"元":{"p":"yuán","w":"两元"},"饿":{"p":"è","w":"饿了"},"饱":{"p":"bǎo","w":"吃饱"},"饼":{"p":"bǐng","w":"饼干"},"干":{"p":"gān","w":"饼干"},"狗":{"p":"gǒu","w":"小狗"},"喜":{"p":"xǐ","w":"喜欢"},"欢":{"p":"huān","w":"喜欢"},"肉":{"p":"ròu","w":"肉丸"},"猫":{"p":"māo","w":"小猫"},"采":{"p":"cǎi","w":"采蜜"},"歌":{"p":"gē","w":"唱歌"},"唱":{"p":"chàng","w":"唱歌"},"青":{"p":"qīng","w":"青菜"},"菜":{"p":"cài","w":"青菜"},"汤":{"p":"tāng","w":"鱼汤"},"蛋":{"p":"dàn","w":"鸡蛋"},"香":{"p":"xiāng","w":"好香"},"用":{"p":"yòng","w":"有用"},"刷":{"p":"shuā","w":"牙刷"},"巾":{"p":"jīn","w":"毛巾"},"抹":{"p":"mā","w":"抹布"},"洗":{"p":"xǐ","w":"洗脸"},"要":{"p":"yào","w":"不要"},"脸":{"p":"liǎn","w":"洗脸"},"放":{"p":"fàng","w":"放学"},"冲":{"p":"chōng","w":"冲凉"},"凉":{"p":"liáng","w":"冲凉"},"东":{"p":"dōng","w":"东西"},"西":{"p":"xī","w":"东西"},"到":{"p":"dào","w":"回到"},"先":{"p":"xiān","w":"先生"},"请":{"p":"qǐng","w":"请问"},"很":{"p":"hěn","w":"很多"},"泡":{"p":"pào","w":"泡泡"},"变":{"p":"biàn","w":"变香"},"谢":{"p":"xiè","w":"谢谢"},"这":{"p":"zhè","w":"这件"},"双":{"p":"shuāng","w":"那双"},"袜":{"p":"wà","w":"袜子"},"那":{"p":"nà","w":"那双"},"皮":{"p":"pí","w":"皮鞋"},"鞋":{"p":"xié","w":"皮鞋"},"件":{"p":"jiàn","w":"这件"},"服":{"p":"fú","w":"衣服"},"被":{"p":"bèi","w":"被子"},"还":{"p":"hái","w":"还有"},"色":{"p":"sè","w":"白色"},"红":{"p":"hóng","w":"红色"},"都":{"p":"dōu","w":"都是"},"动":{"p":"dòng","w":"动作"},"作":{"p":"zuò","w":"动作"},"快":{"p":"kuài","w":"快乐"},"收":{"p":"shōu","w":"收拾"},"拾":{"p":"shí","w":"收拾"},"穿":{"p":"chuān","w":"穿着"},"事":{"p":"shì","w":"讲故事"},"做":{"p":"zuò","w":"做事"},"甜":{"p":"tián","w":"甜和苦"},"苦":{"p":"kǔ","w":"甜和苦"},"臭":{"p":"chòu","w":"臭臭"},"生":{"p":"shēng","w":"生和熟"},"重":{"p":"zhòng","w":"轻和重"},"喝":{"p":"hē","w":"喝水"},"甘":{"p":"gān","w":"甘蔗"},"汁":{"p":"zhī","w":"甘蔗汁"},"买":{"p":"mǎi","w":"买东西"},"斤":{"p":"jīn","w":"公斤"},"串":{"p":"chuàn","w":"一串"},"弯":{"p":"wān","w":"转弯"},"选":{"p":"xuǎn","w":"挑选"},"最":{"p":"zuì","w":"最大"},"抱":{"p":"bào","w":"拥抱"},"拿":{"p":"ná","w":"拿起"},"办":{"p":"bàn","w":"办法"},"法":{"p":"fǎ","w":"办法"},"圆":{"p":"yuán","w":"圆形"},"切":{"p":"qiē","w":"切开"},"怎":{"p":"zěn","w":"怎么"},"扫":{"p":"sǎo","w":"打扫"},"户":{"p":"hù","w":"窗户"},"桌":{"p":"zhuō","w":"桌子"},"椅":{"p":"yǐ","w":"椅子"},"兄":{"p":"xiōng","w":"兄弟"},"房":{"p":"fáng","w":"房间"},"阿":{"p":"ā","w":"阿姨"},"叔":{"p":"shū","w":"叔叔"},"会":{"p":"huì","w":"学会"},"写":{"p":"xiě","w":"写字"},"啊":{"p":"a","w":"好啊"},"完":{"p":"wán","w":"完成"},"业":{"p":"yè","w":"作业"},"躲":{"p":"duǒ","w":"躲藏"},"进":{"p":"jìn","w":"进门"},"净":{"p":"jìng","w":"干净"},"谁":{"p":"shéi","w":"是谁"},"打":{"p":"dǎ","w":"打扫"},"听":{"p":"tīng","w":"听见"},"声":{"p":"shēng","w":"笑声"},"昨":{"p":"zuó","w":"昨天"},"晚":{"p":"wǎn","w":"晚上"},"星":{"p":"xīng","w":"星星"},"明":{"p":"míng","w":"明天"},"庆":{"p":"qìng","w":"庆祝"},"祝":{"p":"zhù","w":"庆祝"},"节":{"p":"jié","w":"节日"},"爱":{"p":"ài","w":"可爱"},"给":{"p":"gěi","w":"送给"},"国":{"p":"guó","w":"国庆日"},"乐":{"p":"lè","w":"快乐"},"课":{"p":"kè","w":"上课"},"台":{"p":"tái","w":"台灯"},"讲":{"p":"jiǎng","w":"讲故事"},"故":{"p":"gù","w":"故事"},"每":{"p":"měi","w":"每个"},"童":{"p":"tóng","w":"儿童节"},"因":{"p":"yīn","w":"因为"},"为":{"p":"wèi","w":"因为"},"兔":{"p":"tù","w":"兔子"},"尾":{"p":"wěi","w":"尾巴"},"短":{"p":"duǎn","w":"短裤"},"眼":{"p":"yǎn","w":"眼睛"},"睛":{"p":"jīng","w":"眼睛"},"爪":{"p":"zhuǎ","w":"爪子"},"尖":{"p":"jiān","w":"尖尖"},"物":{"p":"wù","w":"动物"},"虎":{"p":"hǔ","w":"老虎"},"狮":{"p":"shī","w":"狮子"},"园":{"p":"yuán","w":"动物园"},"期":{"p":"qī","w":"星期天"},"带":{"p":"dài","w":"皮带"},"黑":{"p":"hēi","w":"黑色"},"站":{"p":"zhàn","w":"巴士站"},"叫":{"p":"jiào","w":"叫声"},"认":{"p":"rèn","w":"认字"},"话":{"p":"huà","w":"说话"},"再":{"p":"zài","w":"再见"},"孩":{"p":"hái","w":"孩子"},"组":{"p":"zǔ","w":"组屋"},"屋":{"p":"wū","w":"组屋"},"公":{"p":"gōng","w":"公园"},"校":{"p":"xiào","w":"学校"},"场":{"p":"chǎng","w":"游乐场"},"商":{"p":"shāng","w":"商店"},"店":{"p":"diàn","w":"商店"},"梯":{"p":"tī","w":"电梯"},"扶":{"p":"fú","w":"扶手"},"常":{"p":"cháng","w":"常常"},"球":{"p":"qiú","w":"打球"},"步":{"p":"bù","w":"跑步"},"图":{"p":"tú","w":"图书馆"},"习":{"p":"xí","w":"学习"},"伙":{"p":"huǒ","w":"伙伴"},"伴":{"p":"bàn","w":"伙伴"},"游":{"p":"yóu","w":"游戏"},"拍":{"p":"pāi","w":"拍皮球"},"兴":{"p":"xìng","w":"高兴"},"戏":{"p":"xì","w":"游戏"}};
+var DUOYIN  = {"地":["de"],"的":["dì","dí"],"只":["zhī"],"什":["shí"],"间":["jiàn"],"和":["hè","huó","huò","hú"],"华":["huà"],"长":["zhǎng"],"几":["jī"],"了":["liǎo"],"好":["hào"],"没":["mò"],"看":["kān"],"正":["zhēng"],"少":["shào"],"大":["dài"],"车":["jū"],"发":["fà"],"干":["gàn"],"还":["huán"],"都":["dū"],"重":["chóng"],"切":["qiè"],"扫":["sào"],"会":["kuài"],"乐":["yuè"],"为":["wéi"],"爪":["zhǎo"],"场":["cháng"],"兴":["xīng"],"把":["bà"],"可":["kè"],"抹":["mǒ","mò"]};
+var MODE    = 'pinyin';            /* pinyin | listen */
+var TITLE   = '看字选拼音';
+var CFG     = {"url": "https://p1shizidaren-default-rtdb.asia-southeast1.firebasedatabase.app", "apiKey": "AIzaSyCTwb13RNHUVQ3LGpP9m3WacGtGRPpaOEY"};               /* {url, apiKey} —— 公开设计，非机密 */
+var BUILT   = '2026-09-29 17:24';
+var ROUND_SIZE = 10;
+
+var DB = (CFG.url || '').replace(/\/+$/, '');
+/* 每个练习各有独立作业：作业存在 /assignment/<模块名> 下（云端安全规则对子路径同样生效），
+   所以老师可以在看字选拼音页、听音选字页分别布置作业，互不干扰 */
+var ASG_PATH = 'assignment/' + MODE;
+var LS = {
+  name:  'wb_quiz_name_v1',
+  anon:  'wb_quiz_anon_rt_v1',
+  queue: 'wb_quiz_queue_v1_',
+  seen:  'wb_quiz_seen_v1_'
+};
+
+/* ==========================================================================
+   小工具
+   ========================================================================== */
+function $(id){ return document.getElementById(id); }
+function esc(s){
+  return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){
+    return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c];
+  });
+}
+function txt(id, v){ var e = $(id); if(e) e.textContent = v; }
+function show(id){ var e = $(id); if(e) e.classList.remove('hidden'); }
+function hide(id){ var e = $(id); if(e) e.classList.add('hidden'); }
+function shuffle(a){
+  a = a.slice();
+  for(var i = a.length - 1; i > 0; i--){
+    var j = Math.floor(Math.random() * (i + 1));
+    var t = a[i]; a[i] = a[j]; a[j] = t;
+  }
+  return a;
+}
+function fmtTime(t){
+  if(!t) return '—';
+  var d = new Date(t);
+  function p(n){ return n < 10 ? '0' + n : '' + n; }
+  return p(d.getMonth() + 1) + '/' + p(d.getDate()) + ' ' + p(d.getHours()) + ':' + p(d.getMinutes());
+}
+function lsGet(k, def){ try{ var v = localStorage.getItem(k); return v == null ? def : JSON.parse(v); }catch(e){ return def; } }
+function lsSet(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} }
+
+var toastTimer = null;
+function showToast(msg){
+  var el = $('toast');
+  el.textContent = msg;
+  el.classList.add('on');
+  if(toastTimer) clearTimeout(toastTimer);
+  toastTimer = setTimeout(function(){ el.classList.remove('on'); }, 2200);
+}
+function fireworks(el){
+  try{
+    var box = document.createElement('div');
+    box.className = 'fw';
+    var colors = ['#f39c12','#e74c3c','#27ae60','#3a7bd5','#7a4fd8','#f1c40f'];
+    for(var i = 0; i < 24; i++){
+      var p = document.createElement('i');
+      var ang = (Math.PI * 2 / 24) * i + Math.random() * 0.3;
+      var dist = 60 + Math.random() * 90;
+      p.style.setProperty('--dx', Math.cos(ang) * dist + 'px');
+      p.style.setProperty('--dy', Math.sin(ang) * dist + 'px');
+      p.style.background = colors[i % colors.length];
+      p.style.left = '50%'; p.style.top = '50%';
+      p.style.animationDelay = (Math.random() * 0.08) + 's';
+      box.appendChild(p);
+    }
+    el.appendChild(box);
+    setTimeout(function(){ if(box.parentNode) box.parentNode.removeChild(box); }, 1300);
+  }catch(e){}
+}
+
+var notifyFn = null;
+function notify(msg, fn){
+  var el = $('notify');
+  el.textContent = msg;
+  notifyFn = fn || null;
+  el.onclick = function(){
+    el.classList.remove('on');
+    var f = notifyFn; notifyFn = null;
+    if(f) f();
+  };
+  el.classList.add('on');
+  if(!fn) setTimeout(function(){ el.classList.remove('on'); }, 6000);
+}
+
+/* ==========================================================================
+   语音（听音选字必需；看字选拼音的「听读音」也用它）
+   ========================================================================== */
+var synth = window.speechSynthesis || null;
+var zhVoice = null, speechRate = 0.85, speechPitch = 1.0;
+function loadVoices(){
+  if(!synth) return;
+  var vs = synth.getVoices() || [];
+  var zh = vs.filter(function(v){
+    return v.lang === 'zh-CN' || v.lang === 'zh-TW' || v.lang === 'zh-HK' ||
+      (v.lang && v.lang.indexOf('zh') === 0) ||
+      (v.name && (v.name.indexOf('Kangkang') >= 0 || v.name.indexOf('Chinese') >= 0 ||
+                  v.name.indexOf('Huihui') >= 0 || v.name.indexOf('Yaoyao') >= 0 ||
+                  v.name.indexOf('Tingting') >= 0 || v.name.indexOf('Meijia') >= 0));
+  });
+  /* 优先微软 Kangkang（Windows 标准普通话童声/女声），否则用第一个中文语音 */
+  zhVoice = zh.filter(function(v){ return (v.name || '').indexOf('Kangkang') >= 0; })[0] || zh[0] || null;
+}
+if(synth){
+  loadVoices();
+  synth.onvoiceschanged = function(){ loadVoices(); };
+}
+function speak(text, opt){
+  opt = opt || {};
+  if(!synth) return;
+  try{ synth.cancel(); }catch(e){}
+  var u = new SpeechSynthesisUtterance(String(text));
+  u.lang = 'zh-CN';
+  u.rate = opt.rate || speechRate;
+  u.pitch = opt.pitch || speechPitch;
+  if(zhVoice) u.voice = zhVoice;
+  if(opt.onend) u.onend = opt.onend;
+  synth.speak(u);
+}
+/* 听音选字：先读字 → 停顿 → 读「词语的字」，例如「口，口水的口」 */
+function playListenQuestion(){
+  var ch = R.cur;
+  if(!ch || !synth) return;
+  var d = WORDS[ch] || { p:'', w:'' };
+  try{ synth.cancel(); }catch(e){}
+  var u1 = new SpeechSynthesisUtterance(ch);
+  u1.lang = 'zh-CN'; u1.rate = speechRate; u1.pitch = speechPitch;
+  if(zhVoice) u1.voice = zhVoice;
+  var w = d.w || '';
+  if(w && w !== ch){
+    u1.onend = function(){
+      setTimeout(function(){
+        var u2 = new SpeechSynthesisUtterance(w + '的' + ch);
+        u2.lang = 'zh-CN'; u2.rate = speechRate; u2.pitch = speechPitch;
+        if(zhVoice) u2.voice = zhVoice;
+        try{ synth.speak(u2); }catch(e){}
+      }, 430);
+    };
+  }
+  try{ synth.speak(u1); }catch(e){}
+}
+
+/* ==========================================================================
+   云端：匿名登录（学生） / 邮箱登录（老师） / 作业与成绩读写
+   ========================================================================== */
+var anonToken = null, anonExp = 0;
+var teacherToken = null;
+
+function ensureToken(cb){
+  if(!(DB && CFG.apiKey)){ cb(false); return; }
+  if(anonToken && Date.now() < anonExp){ cb(true); return; }
+  var rt = lsGet(LS.anon, '');
+  var url, body;
+  if(rt){
+    url = 'https://securetoken.googleapis.com/v1/token?key=' + encodeURIComponent(CFG.apiKey);
+    body = 'grant_type=refresh_token&refresh_token=' + encodeURIComponent(rt);
+  }else{
+    url = 'https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=' + encodeURIComponent(CFG.apiKey);
+    body = JSON.stringify({ returnSecureToken: true });
+  }
+  fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': rt ? 'application/x-www-form-urlencoded' : 'application/json' },
+    body: body
+  }).then(function(r){ return r.json(); }).then(function(d){
+    if(d && d.id_token){                      /* securetoken 刷新返回下划线命名 */
+      anonToken = d.id_token;
+      anonExp = Date.now() + (parseInt(d.expires_in, 10) || 3000) * 1000 - 60000;
+      if(d.refresh_token) lsSet(LS.anon, d.refresh_token);
+      cb(true); return;
+    }
+    if(d && d.idToken){
+      anonToken = d.idToken;
+      anonExp = Date.now() + (parseInt(d.expiresIn, 10) || 3600) * 1000 - 60000;
+      if(d.refreshToken) lsSet(LS.anon, d.refreshToken);
+      cb(true); return;
+    }
+    lsSet(LS.anon, '');
+    cb(false);
+  }).catch(function(){ cb(false); });
+}
+
+/* body = null 时发送 "null"（Firebase 以此删除节点）；undefined 才表示不带请求体 */
+function dbReq(path, method, body, tok, cb){
+  var url = DB + '/' + path + '.json?auth=' + encodeURIComponent(tok || '');
+  var opts = { method: method };
+  if(method !== 'GET' && body !== undefined){
+    opts.headers = { 'Content-Type': 'application/json' };
+    opts.body = JSON.stringify(body);
+  }
+  fetch(url, opts).then(function(r){
+    return r.text().then(function(t){
+      var d = null;
+      try{ d = t ? JSON.parse(t) : null; }catch(e){ d = null; }
+      cb(r.status, d);
+    });
+  }).catch(function(){ cb(0, null); });
+}
+function errText(d){
+  var c = (d && d.error && d.error.message) || '';
+  if(c.indexOf('EMAIL_NOT_FOUND') >= 0) return '邮箱不存在';
+  if(c.indexOf('INVALID_PASSWORD') >= 0 || c.indexOf('INVALID_LOGIN_CREDENTIALS') >= 0) return '密码不正确';
+  if(c.indexOf('INVALID_EMAIL') >= 0) return '邮箱格式不对';
+  if(c.indexOf('TOO_MANY_ATTEMPTS') >= 0) return '尝试次数过多，请稍后再试';
+  if(c.indexOf('OPERATION_NOT_ALLOWED') >= 0) return '该登录方式未在 Firebase 中启用';
+  if(c.indexOf('USER_DISABLED') >= 0) return '该账号已被停用';
+  return c || '未知错误';
+}
+
+/* ---- 成绩上报（仅课堂模式） + 离线队列 ---- */
+function reportRound(rec){
+  if(!(DB && CFG.apiKey)) return;
+  if(!rec.name || !rec.total) return;
+  postRecord(rec, function(ok){ if(!ok) queueAdd(rec); });
+}
+function postRecord(rec, cb){
+  ensureToken(function(ok){
+    if(!ok){ cb(false); return; }
+    dbReq('results', 'POST', rec, anonToken, function(st){
+      if(st === 401){
+        anonToken = null;
+        ensureToken(function(ok2){
+          if(!ok2){ cb(false); return; }
+          dbReq('results', 'POST', rec, anonToken, function(st2){ cb(st2 === 200); });
+        });
+        return;
+      }
+      cb(st === 200);
+    });
+  });
+}
+function queueAdd(rec){
+  var q = lsGet(LS.queue + (ST.asgId || 'free'), []);
+  q.push(rec);
+  if(q.length > 200) q = q.slice(-200);
+  lsSet(LS.queue + (ST.asgId || 'free'), q);
+}
+function flushQueue(){
+  var key = LS.queue + (ST.asgId || 'free');
+  var q = lsGet(key, []);
+  if(!q.length) return;
+  postRecord(q[0], function(ok){
+    if(!ok) return;
+    q.shift();
+    lsSet(key, q);
+    if(q.length) setTimeout(flushQueue, 400);
+  });
+}
+
+/* ==========================================================================
+   课堂状态
+   ========================================================================== */
+var VIEW = 'boot';                     /* boot | wait | quiz | teacher */
+var ST = {
+  asg: null, asgId: '', name: '', dismissed: '',
+  plan: [], seen: {}, seenAsg: ''
+};
+var R = { list: [], idx: 0, qid: 0, cur: '', tryCount: 0, done: false,
+          score: 0, correct: 0, wrong: 0, firstTry: 0, streak: 0, missed: [] };
+var pollTimer = null;
+
+function planOf(asg){
+  var list = (asg && asg.chars) ? asg.chars.filter(function(c){ return WORDS[c]; }) : [];
+  return list;
+}
+function seenKey(){ return LS.seen + (ST.asgId || ''); }
+function loadSeen(){
+  if(ST.seenAsg === ST.asgId) return;
+  ST.seen = asgSeen() || {};
+  ST.seenAsg = ST.asgId;
+}
+function asgSeen(){ return lsGet(seenKey(), {}); }
+function saveSeen(){ lsSet(seenKey(), ST.seen); }
+function coverText(){
+  var total = ST.plan.length;
+  var n = 0;
+  for(var i = 0; i < total; i++){ if(ST.seen[ST.plan[i]]) n++; }
+  return '已练 ' + n + '/' + total;
+}
+
+/* ==========================================================================
+   出题
+   ========================================================================== */
+function pickRound(){
+  var pool = ST.plan.slice();
+  if(!pool.length) return [];
+  var unseen = pool.filter(function(c){ return !ST.seen[c]; });
+  if(unseen.length === 0){
+    /* 全部练过一轮了：重新开始覆盖，让学生继续巩固 */
+    ST.seen = {};
+    saveSeen();
+    unseen = pool.slice();
+  }
+  var out = shuffle(unseen).slice(0, ROUND_SIZE);
+  if(out.length < ROUND_SIZE){
+    var rest = shuffle(pool.filter(function(c){ return out.indexOf(c) < 0; }));
+    out = out.concat(rest.slice(0, ROUND_SIZE - out.length));
+  }
+  return shuffle(out);
+}
+function optionsFor(ch){
+  if(MODE === 'pinyin'){
+    var correct = (WORDS[ch] || {}).p || '';
+    var alt = DUOYIN[ch] || [];
+    var all = [], seen = {};
+    for(var c in WORDS){
+      var p = WORDS[c].p;
+      if(p && p !== correct && alt.indexOf(p) < 0 && !seen[p]){ seen[p] = 1; all.push(p); }
+    }
+    var ini = correct.charAt(0);
+    var same = shuffle(all.filter(function(p){ return p.charAt(0) === ini; }));
+    var rest = shuffle(all.filter(function(p){ return p.charAt(0) !== ini; }));
+    var dis = same.slice(0, 3);
+    while(dis.length < 3 && rest.length) dis.push(rest.pop());
+    return { correct: correct, opts: shuffle([correct].concat(dis)) };
+  }
+  /* listen：4 个汉字，随机干扰（与原版一致） */
+  var pool = ST.plan.slice();
+  /* 自选字不足 4 个时，从全部识读字补齐，保证总有 4 个选项 */
+  if(pool.length < 4){
+    var extra = [];
+    for(var l = 0; l < LESSONS.length; l++){
+      var rec = LESSONS[l].rec || [];
+      for(var k = 0; k < rec.length; k++){
+        if(pool.indexOf(rec[k]) < 0 && WORDS[rec[k]]) extra.push(rec[k]);
+      }
+    }
+    pool = pool.concat(shuffle(extra).slice(0, 8));
+  }
+  var others = shuffle(pool.filter(function(c){ return c !== ch; })).slice(0, 3);
+  return { correct: ch, opts: shuffle([ch].concat(others)) };
+}
+
+function renderQuestion(){
+  if(VIEW !== 'quiz') return;
+  if(R.idx >= R.list.length){ finishRound(); return; }
+  R.qid++;
+  var myQ = R.qid;
+  R.cur = R.list[R.idx];
+  R.tryCount = 0; R.done = false;
+  var ch = R.cur;
+  var d = WORDS[ch] || { p:'', w:'' };
+  var o = optionsFor(ch);
+  var pct = Math.round(R.idx / Math.max(1, R.list.length) * 100);
+
+  var head = '<div class="bar"><i style="width:' + pct + '%"></i></div>' +
+    '<div class="meta"><div>🧩 第 <b>' + (R.idx + 1) + '</b> / ' + R.list.length + ' 题</div>' +
+    '<div>⭐ <b>' + R.score + '</b> 分</div></div>';
+
+  var stem;
+  if(MODE === 'pinyin'){
+    stem = '<div class="stem"><div class="bigchar kai">' + esc(ch) + '</div>' +
+      '<button class="speak" id="btnSpeak">🔊 听读音</button>' +
+      '<div class="ask">这个字的正确拼音是？</div></div>';
+  }else{
+    stem = '<div class="stem">' +
+      '<button class="speak big" id="btnSpeak">🔊 点击播放</button>' +
+      '<div class="ask">先听字音，再听词语，选出这个字</div></div>';
+  }
+
+  var optsHtml = o.opts.map(function(v){
+    var cls = (MODE === 'pinyin') ? 'opt pinyin' : 'opt char kai';
+    return '<button class="' + cls + '" data-opt="' + esc(v) + '">' + esc(v) + '</button>';
+  }).join('');
+
+  $('quizCard').innerHTML = head + stem +
+    '<div class="opts" id="opts">' + optsHtml + '</div>' +
+    '<div class="hintline" id="hint"></div>';
+
+  $('btnSpeak').onclick = function(){
+    if(MODE === 'pinyin') speak(ch);
+    else playListenQuestion();
+  };
+  Array.prototype.forEach.call($('opts').querySelectorAll('.opt'), function(b){
+    b.onclick = function(){ answer(b, o.correct, d); };
+  });
+
+  if(MODE === 'listen'){
+    setTimeout(function(){
+      if(VIEW !== 'quiz' || R.qid !== myQ || R.done) return;
+      playListenQuestion();
+    }, 380);
+  }
+}
+
+function answer(btn, correct, d){
+  if(R.done || VIEW !== 'quiz') return;
+  var ch = R.cur;
+  var all = $('opts').querySelectorAll('.opt');
+  if(btn.dataset.opt === correct){
+    R.done = true;
+    btn.classList.add('correct');
+    Array.prototype.forEach.call(all, function(x){ if(x !== btn) x.disabled = true; });
+    var pts = (R.tryCount === 0) ? 2 : 1;
+    R.score += pts; R.correct++; R.streak++;
+    if(R.tryCount === 0) R.firstTry++;
+    if(R.streak >= 3) showToast('🔥 连对 ' + R.streak + ' 题！');
+    $('hint').innerHTML = '<span class="ok">' +
+      (R.tryCount === 0 ? '🎉 一次答对！+2分' : '✅ 答对了！+1分') + '</span>' +
+      '<div style="font-size:14px;color:#7f8c9b;font-weight:400;margin-top:4px">' +
+      esc(ch) + ' ' + esc(d.p || '') + ' · ' + esc(d.w || '') + '</div>';
+    fireworks(btn);
+    var myQ = R.qid;
+    setTimeout(function(){
+      if(VIEW !== 'quiz' || R.qid !== myQ) return;
+      R.idx++; renderQuestion();
+    }, 2300);
+    return;
+  }
+  /* 答错 */
+  R.tryCount++; R.wrong++; R.streak = 0;
+  btn.classList.add('wrong');
+  btn.disabled = true;
+  $('hint').innerHTML = '<span class="no">' +
+    (MODE === 'listen' ? '❌ 不对哦，再听一遍试试！' : '❌ 再想想，正确拼音是？') + '</span>';
+  if(MODE === 'listen') playListenQuestion();
+
+  var remain = Array.prototype.filter.call($('opts').querySelectorAll('.opt'), function(x){ return !x.disabled; });
+  if(remain.length === 0){
+    R.done = true;
+    Array.prototype.forEach.call($('opts').querySelectorAll('.opt'), function(x){
+      if(x.dataset.opt === correct) x.classList.add('reveal');
+    });
+    R.missed.push(ch);
+    $('hint').innerHTML = '<span class="no">' +
+      (MODE === 'listen' ? '答案是「' + esc(ch) + '」' : '正确读音是 ' + esc(correct)) + '</span>' +
+      '<div style="font-size:14px;color:#7f8c9b;font-weight:400;margin-top:4px">' +
+      esc(ch) + ' ' + esc(d.p || '') + ' · ' + esc(d.w || '') + '</div>';
+    var myQ2 = R.qid;
+    setTimeout(function(){
+      if(VIEW !== 'quiz' || R.qid !== myQ2) return;
+      R.idx++; renderQuestion();
+    }, 2600);
+  }
+}
+
+/* ==========================================================================
+   一轮结算
+   ========================================================================== */
+function finishRound(){
+  var total = R.list.length;
+  /* 记录已练字 */
+  R.list.forEach(function(c){ ST.seen[c] = 1; });
+  saveSeen();
+  txt('hdCover', coverText());
+
+  var missed = R.missed.slice();
+  var rec = {
+    name: ST.name, mode: MODE, total: total,
+    correct: R.correct, wrong: R.wrong, score: R.score,
+    firstTry: R.firstTry, missed: missed,
+    asg: ST.asg ? (ST.asg.name || '') : '', at: Date.now()
+  };
+  reportRound(rec);
+
+  var pct = total ? Math.round(R.correct / total * 100) : 0;
+  var star = '⭐⭐⭐';
+  if(pct < 60) star = '⭐'; else if(pct < 80) star = '⭐⭐';
+  var missHtml = missed.length
+    ? missed.map(function(c){ return '<span class="c kai">' + esc(c) + '</span>'; }).join('')
+    : '<span class="none">全部一次答对，太棒了！</span>';
+
+  $('quizCard').innerHTML =
+    '<div class="round">' +
+      '<div class="em">🏆</div>' +
+      '<h2>' + esc(TITLE) + ' · 本轮结束</h2>' +
+      '<div class="sc">' + R.score + ' 分</div>' +
+      '<div class="st">' + star + '</div>' +
+      '<div class="stats">' +
+        '<div>答对<b>' + R.correct + '/' + total + '</b></div>' +
+        '<div>答错<b style="color:#e74c3c">' + R.wrong + '</b></div>' +
+        '<div>正确率<b>' + pct + '%</b></div>' +
+      '</div>' +
+      '<div class="miss">需要再练的字：' + missHtml + '</div>' +
+      '<div class="row">' +
+        '<button class="btn btn-p" id="btnNext">继续下一轮</button>' +
+      '</div>' +
+      '<div class="hint" id="rdInfo" style="margin-top:14px">' + coverText() + ' · 成绩已交给老师</div>' +
+    '</div>';
+  $('btnNext').onclick = startRound;
+}
+function startRound(){
+  if(VIEW !== 'quiz' || !ST.plan.length) return;
+  R = { list: pickRound(), idx: 0, qid: R.qid + 1, cur: '', tryCount: 0, done: false,
+        score: 0, correct: 0, wrong: 0, firstTry: 0, streak: 0, missed: [] };
+  txt('hdCover', coverText());
+  renderQuestion();
+}
+
+/* ==========================================================================
+   学生端：作业获取 / 姓名 / 轮询
+   ========================================================================== */
+function enterWait(title, msg){
+  VIEW = 'wait';
+  hide('viewQuiz'); hide('viewTeacher'); show('viewWait');
+  txt('waitTitle', title || '等待老师布置作业');
+  txt('waitMsg', msg || '老师布置后，这一页会自动开始，你不用刷新。');
+  txt('waitTime', '上次检查：' + fmtTime(Date.now()));
+  try{ if(synth) synth.cancel(); }catch(e){}
+}
+function fetchAssignment(cb){
+  ensureToken(function(ok){
+    if(!ok){ cb(null, 'token'); return; }
+    dbReq(ASG_PATH, 'GET', undefined, anonToken, function(st, data){
+      if(st === 401){
+        anonToken = null;
+        ensureToken(function(ok2){
+          if(!ok2){ cb(null, 'token'); return; }
+          dbReq(ASG_PATH, 'GET', undefined, anonToken, function(s2, d2){
+            cb(s2 === 200 ? d2 : null, s2 === 200 ? '' : ('http' + s2));
+          });
+        });
+        return;
+      }
+      cb(st === 200 ? data : null, st === 200 ? '' : ('http' + st));
+    });
+  });
+}
+function applyAssignment(asg, first){
+  if(asg && asg.chars && asg.chars.length){
+    ST.asg = asg;
+    ST.asgId = String(asg.id || '');
+    loadSeen();
+    if(!first && ST.dismissed === ST.asgId) return;
+    askName(asg);
+    return;
+  }
+  /* 没有作业了 */
+  ST.asg = null; ST.asgId = '';
+  if(first){
+    enterWait('等待老师布置作业', '老师还没有布置作业。这一页会自动等待，老师一发布就会开始。');
+  }else if(VIEW === 'quiz'){
+    exitQuiz('老师已结束这次作业');
+  }else{
+    enterWait('等待老师布置作业', '老师还没有布置作业。这一页会自动等待，老师一发布就会开始。');
+  }
+}
+function askName(asg){
+  var roster = (asg && asg.roster && asg.roster.length) ? asg.roster : [];
+  var box = $('rosterBox');
+  box.innerHTML = roster.map(function(n){
+    return '<button data-n="' + esc(n) + '">' + esc(n) + '</button>';
+  }).join('');
+  box.style.display = roster.length ? 'flex' : 'none';
+  box.onclick = function(e){
+    var b = e.target.closest('button');
+    if(!b) return;
+    Array.prototype.forEach.call(box.querySelectorAll('button'), function(x){ x.classList.remove('on'); });
+    b.classList.add('on');
+    $('nameInput').value = b.dataset.n;
+  };
+  var saved = lsGet(LS.name, '') || '';
+  $('nameInput').value = saved;
+  txt('nameTip', '作业：' + (asg.name || '课堂练习') + ' · ' + planOf(asg).length + ' 个字');
+  show('nameModal');
+}
+function enterQuiz(){
+  hide('nameModal'); hide('viewWait'); hide('viewTeacher');
+  show('viewQuiz');
+  VIEW = 'quiz';
+  txt('hdName', ST.name);
+  txt('hdSub', '作业：' + ((ST.asg && ST.asg.name) || '课堂练习'));
+  txt('hdCover', coverText());
+  startRound();
+  flushQueue();
+}
+function exitQuiz(msg){
+  VIEW = 'wait';
+  hide('viewQuiz');
+  enterWait('等待老师布置作业', msg || '老师已结束这次作业，先把笔放下休息一下吧。');
+}
+function pollAssignment(){
+  if(VIEW === 'teacher' || VIEW === 'boot') return;
+  fetchAssignment(function(asg, err){
+    if(err) return;
+    var id = (asg && asg.id) ? String(asg.id) : '';
+    if(id === (ST.asgId || '')){
+      /* 同一份作业：如果是等待中，直接进入 */
+      if(VIEW === 'wait' && id){ applyAssignment(asg, true); }
+      return;
+    }
+    if(id){
+      if(ST.dismissed === id) return;
+      if(VIEW === 'quiz'){
+        notify('📣 老师换了新作业《' + (asg.name || '') + '》，点击切换', function(){
+          applyAssignment(asg, true);
+        });
+      }else{
+        applyAssignment(asg, true);
+      }
+    }else{
+      if(VIEW === 'quiz') exitQuiz('老师已结束这次作业');
+      else txt('waitTime', '上次检查：' + fmtTime(Date.now()) + ' · 暂无作业');
+    }
+  });
+}
+function bootStudent(){
+  hide('boot');
+  if(!(DB && CFG.apiKey)){
+    enterWait('本页还没有连上云端', '请让老师完成 Firebase 配置后重新生成页面。');
+    return;
+  }
+  ensureToken(function(ok){
+    if(!ok){
+      enterWait('连不上云端', '请检查网络后点「立即检查」重试（在家也可以用，只要能上网）。');
+      return;
+    }
+    fetchAssignment(function(asg, err){
+      if(err === 'token'){
+        enterWait('连不上云端', '请检查网络后点「立即检查」重试。');
+        return;
+      }
+      applyAssignment(asg, true);
+    });
+    if(pollTimer) clearInterval(pollTimer);
+    pollTimer = setInterval(pollAssignment, 30000);
+  });
+}
+
+/* ==========================================================================
+   老师端
+   ========================================================================== */
+var SEL = [], LAST_STATS = {}, STAT_ROWS = [], STAT_RECS = [], OPEN_NAME = '';
+
+function tMsg(msg, kind){
+  var el = $('tMsg');
+  if(!el) return;
+  el.textContent = msg || '';
+  el.className = 'tmsg' + (kind === 'err' ? ' err' : kind === 'ok' ? ' ok' : '');
+}
+function teacherEntryClick(){
+  VIEW = 'teacher';
+  hide('viewQuiz'); hide('viewWait');
+  show('viewTeacher');
+  try{ if(synth) synth.cancel(); }catch(e){}
+  if(!(DB && CFG.apiKey)){
+    show('loginBox');
+    hide('panel');
+    tMsg('未配置云端：请在 cls_config.json 填入 Firebase 数据库地址与 Web API key 后重新生成页面。', 'err');
+    return;
+  }
+  if(teacherToken){ showPanel(); }else{ show('loginBox'); hide('panel'); tMsg(''); }
+}
+function backToPractice(){
+  teacherToken = null;
+  if(pollTimer) clearInterval(pollTimer);
+  pollTimer = setInterval(pollAssignment, 30000);      /* 回到学生端后恢复作业轮询 */
+  if(ST.asgId && ST.plan.length){ enterQuiz(); }
+  else{ enterWait('等待老师布置作业'); }
+}
+function renderLessonGrid(){
+  var h = '';
+  LESSONS.forEach(function(l){
+    var rec = (l.rec || []).filter(function(c){ return WORDS[c]; });
+    h += '<button class="lchip" data-id="' + l.id + '">' + esc(l.name) +
+      '<small>识读 ' + rec.length + ' 字</small></button>';
+  });
+  $('lessonGrid').innerHTML = h;
+  Array.prototype.forEach.call($('lessonGrid').querySelectorAll('.lchip'), function(b){
+    b.onclick = function(){
+      var l = LESSONS.filter(function(x){ return String(x.id) === b.dataset.id; })[0];
+      if(!l) return;
+      var rec = (l.rec || []).filter(function(c){ return WORDS[c]; });
+      var allIn = rec.every(function(c){ return SEL.indexOf(c) >= 0; });
+      if(allIn) SEL = SEL.filter(function(c){ return rec.indexOf(c) < 0; });
+      else rec.forEach(function(c){ if(SEL.indexOf(c) < 0) SEL.push(c); });
+      syncSel();
+    };
+  });
+  syncSel();
+}
+function syncSel(){
+  Array.prototype.forEach.call($('lessonGrid').querySelectorAll('.lchip'), function(b){
+    var l = LESSONS.filter(function(x){ return String(x.id) === b.dataset.id; })[0];
+    if(!l) return;
+    var rec = (l.rec || []).filter(function(c){ return WORDS[c]; });
+    var allIn = rec.length > 0 && rec.every(function(c){ return SEL.indexOf(c) >= 0; });
+    if(allIn) b.classList.add('on'); else b.classList.remove('on');
+  });
+  $('selList').innerHTML = SEL.map(function(c){
+    return '<div class="schar kai">' + esc(c) + '<span data-c="' + esc(c) + '">×</span></div>';
+  }).join('') || '<div class="empty" style="padding:6px 0">还没有选字</div>';
+  Array.prototype.forEach.call($('selList').querySelectorAll('.schar span'), function(x){
+    x.onclick = function(){
+      SEL = SEL.filter(function(c){ return c !== x.dataset.c; });
+      syncSel();
+    };
+  });
+}
+function publish(){
+  if(!teacherToken){ tMsg('请先登录', 'err'); return; }
+  if(!SEL.length){ tMsg('请先选字', 'err'); return; }
+  var name = ($('asgName').value || '').trim() || (TITLE + ' ' + fmtTime(Date.now()));
+  var roster = ($('roster').value || '').split(/\r?\n/)
+    .map(function(s){ return s.trim(); }).filter(function(s){ return !!s; });
+  var seen = {}, rl = [];
+  roster.forEach(function(n){ if(!seen[n]){ seen[n] = 1; rl.push(n); } });
+  var body = { id: String(Date.now()), name: name, chars: SEL.slice(), roster: rl, mode: MODE, updatedAt: Date.now() };
+  dbReq(ASG_PATH, 'PUT', body, teacherToken, function(st){
+    if(st === 401){ teacherToken = null; show('loginBox'); hide('panel'); tMsg('登录已过期，请重新登录', 'err'); return; }
+    if(st === 403){ tMsg('发布失败：老师账号无写权限，请检查安全规则里的邮箱是否与登录邮箱一致', 'err'); return; }
+    if(st !== 200){ tMsg('发布失败（HTTP ' + st + '）', 'err'); return; }
+    tMsg('已发布：《' + name + '》' + SEL.length + ' 字' + (rl.length ? ' · 名单 ' + rl.length + ' 人' : ''), 'ok');
+    loadAssignmentInfo();
+    loadStats();
+  });
+}
+function endAssignment(){
+  if(!teacherToken){ tMsg('请先登录', 'err'); return; }
+  if(!confirm('确定结束当前作业吗？学生端会显示「等待老师布置作业」。')) return;
+  var btn = $('btnEnd');
+  if(btn) btn.disabled = true;
+  var done = function(st){
+    if(btn) btn.disabled = false;
+    if(st === 401){ teacherToken = null; show('loginBox'); hide('panel'); tMsg('登录已过期，请重新登录', 'err'); return; }
+    if(st === 403){ tMsg('结束失败：老师账号无写权限，请检查安全规则邮箱', 'err'); return; }
+    if(st !== 200){ tMsg('结束失败（HTTP ' + st + '）', 'err'); return; }
+    tMsg('作业已结束，学生端 30 秒内回到等待状态', 'ok');
+    loadAssignmentInfo();
+  };
+  dbReq(ASG_PATH, 'DELETE', null, teacherToken, function(st){
+    if(st === 200 || st === 401 || st === 403){ done(st); return; }
+    dbReq(ASG_PATH, 'PUT', null, teacherToken, done);
+  });
+}
+function loadAssignmentInfo(){
+  if(!teacherToken) return;
+  dbReq(ASG_PATH, 'GET', undefined, teacherToken, function(st, d){
+    if(st === 401){ teacherToken = null; show('loginBox'); hide('panel'); tMsg('登录已过期，请重新登录', 'err'); return; }
+    if(st !== 200){ txt('asgInfo', '读取失败（HTTP ' + st + '）'); return; }
+    if(d && d.chars){
+      txt('asgInfo', '进行中：《' + (d.name || '') + '》 · ' + d.chars.length + ' 字 · 名单 ' +
+        ((d.roster || []).length) + ' 人 · 发布 ' + fmtTime(d.updatedAt));
+    }else{
+      txt('asgInfo', '当前没有进行中的作业（学生端显示「等待老师布置作业」）');
+    }
+  });
+}
+function loadStats(){
+  if(!teacherToken) return;
+  dbReq('results', 'GET', undefined, teacherToken, function(st, data){
+    if(st === 401){ teacherToken = null; show('loginBox'); hide('panel'); tMsg('登录已过期，请重新登录', 'err'); return; }
+    if(st !== 200){ $('stats').innerHTML = '<div class="empty">读取失败（HTTP ' + st + '）</div>'; return; }
+    renderStats(data || {});
+  });
+}
+function renderStats(data){
+  var byName = {}, recs = [];
+  for(var k in data){
+    var r = data[k];
+    if(!r || !r.name || r.mode !== MODE) continue;     /* 只看本模块的记录 */
+    recs.push(r);
+    var g = byName[r.name] || (byName[r.name] = {
+      name: r.name, rounds: 0, q: 0, correct: 0, first: 0, last: 0, miss: {}, recs: []
+    });
+    g.rounds++;
+    g.q += (r.total || 0);
+    g.correct += (r.correct || 0);
+    g.first += (r.firstTry || 0);
+    g.last = Math.max(g.last, r.at || 0);
+    (r.missed || []).forEach(function(c){ g.miss[c] = (g.miss[c] || 0) + 1; });
+    g.recs.push(r);
+  }
+  STAT_RECS = recs;
+  STAT_ROWS = Object.keys(byName).map(function(n){ return byName[n]; })
+    .sort(function(a, b){ return String(a.name).localeCompare(String(b.name), 'zh'); });
+  STAT_ROWS.forEach(function(g){ g.recs.sort(function(a, b){ return (b.at || 0) - (a.at || 0); }); });
+  LAST_STATS = data;
+  if(!STAT_ROWS.length){
+    $('stats').innerHTML = '<div class="empty">还没有学生练习记录（学生练完一轮即出现）</div>';
+    return;
+  }
+  var h = '<table class="stat"><thead><tr><th>姓名</th><th>轮数</th><th>题数</th>' +
+          '<th>正确率</th><th>薄弱字</th><th>最后活跃</th></tr></thead><tbody>';
+  STAT_ROWS.forEach(function(g){
+    var acc = g.q ? Math.round(g.correct / g.q * 100) : 0;
+    var weak = Object.keys(g.miss).sort(function(a, b){ return g.miss[b] - g.miss[a]; }).slice(0, 6);
+    h += '<tr class="rowc" data-n="' + esc(g.name) + '"><td><b>' + esc(g.name) + '</b></td>' +
+      '<td>' + g.rounds + '</td><td>' + g.q + '</td><td>' + acc + '%</td>' +
+      '<td class="kai" style="font-size:19px">' + (weak.length ? weak.join(' ') : '—') + '</td>' +
+      '<td>' + fmtTime(g.last) + '</td></tr>';
+  });
+  h += '</tbody></table><div id="detBox"></div>';
+  $('stats').innerHTML = h;
+  Array.prototype.forEach.call($('stats').querySelectorAll('.rowc'), function(tr){
+    tr.onclick = function(){ toggleDetail(tr.dataset.n); };
+  });
+}
+function toggleDetail(name){
+  if(OPEN_NAME === name){
+    OPEN_NAME = '';
+    $('detBox').innerHTML = '';
+    return;
+  }
+  OPEN_NAME = name;
+  var g = STAT_ROWS.filter(function(x){ return x.name === name; })[0];
+  if(!g) return;
+  var lines = g.recs.map(function(r){
+    var acc = r.total ? Math.round((r.correct || 0) / r.total * 100) : 0;
+    return '<div>· ' + fmtTime(r.at) + ' ｜ 答对 ' + (r.correct || 0) + '/' + (r.total || 0) +
+      '（' + acc + '%）｜ ' + (r.score || 0) + ' 分 ｜ 一次过 ' + (r.firstTry || 0) +
+      ((r.missed && r.missed.length) ? ' ｜ 错字：<span class="kai" style="font-size:17px">' + r.missed.join(' ') + '</span>' : '') +
+      (r.asg ? ' ｜ ' + esc(r.asg) : '') + '</div>';
+  }).join('');
+  $('detBox').innerHTML = '<div class="det" style="margin-top:10px"><b>' + esc(name) + ' · 逐轮明细</b>' + lines + '</div>';
+}
+function exportCsv(){
+  if(!STAT_ROWS.length){ tMsg('没有可导出的记录', 'err'); return; }
+  var rows = [['姓名', '轮数', '题数', '答对', '正确率', '一次答对', '薄弱字', '最后活跃', '明细']];
+  STAT_ROWS.forEach(function(g){
+    var weak = Object.keys(g.miss).sort(function(a, b){ return g.miss[b] - g.miss[a]; }).join(' ');
+    var det = g.recs.map(function(r){
+      return fmtTime(r.at) + ' ' + (r.correct || 0) + '/' + (r.total || 0) +
+        ((r.missed && r.missed.length) ? ('(错:' + r.missed.join('') + ')') : '');
+    }).join(' ; ');
+    rows.push([g.name, g.rounds, g.q, g.correct,
+      (g.q ? Math.round(g.correct / g.q * 100) : 0) + '%', g.first, weak, fmtTime(g.last), det]);
+  });
+  var csv = rows.map(function(r){
+    return r.map(function(v){ return '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"'; }).join(',');
+  }).join('\r\n');
+  var blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8' });
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = TITLE + '_成绩_' + new Date().toISOString().slice(0, 10) + '.csv';
+  document.body.appendChild(a); a.click();
+  setTimeout(function(){ document.body.removeChild(a); }, 500);
+}
+function wipeResults(){
+  if(!teacherToken){ tMsg('请先登录', 'err'); return; }
+  if(!confirm('确定清空「' + TITLE + '」这一个模块的全部成绩吗？其他练习的记录不受影响。此操作不可撤销。')) return;
+  dbReq('results', 'GET', undefined, teacherToken, function(st, data){
+    if(st === 401){ teacherToken = null; show('loginBox'); hide('panel'); tMsg('登录已过期，请重新登录', 'err'); return; }
+    if(st !== 200){ tMsg('清空失败：读取记录出错（HTTP ' + st + '）', 'err'); return; }
+    var keys = [];
+    for(var k in (data || {})){
+      var r = data[k];
+      if(r && r.mode === MODE) keys.push(k);
+    }
+    if(!keys.length){ tMsg('本模块没有成绩记录', 'ok'); loadStats(); return; }
+    var done = 0, fail = 0;
+    var next = function(i){
+      if(i >= keys.length){
+        tMsg('已清空本模块 ' + done + ' 条记录' + (fail ? ('，' + fail + ' 条失败') : ''), fail ? 'err' : 'ok');
+        loadStats();
+        return;
+      }
+      dbReq('results/' + keys[i], 'DELETE', null, teacherToken, function(s){
+        if(s === 200) done++; else fail++;
+        next(i + 1);
+      });
+    };
+    tMsg('正在清空…', 'ok');
+    next(0);
+  });
+}
+function showPanel(){
+  hide('loginBox');
+  show('panel');
+  txt('tMsg', '');
+  if(!SEL.length) renderLessonGrid(); else syncSel();
+  $('urlBox').textContent = location.href.split('#')[0].split('?')[0];
+  loadAssignmentInfo();
+  loadStats();
+  if(pollTimer) clearInterval(pollTimer);
+  pollTimer = setInterval(function(){ if(VIEW === 'teacher' && teacherToken) loadStats(); }, 15000);
+}
+function teacherLogin(){
+  var em = ($('tEmail').value || '').trim();
+  var pw = $('tPass').value || '';
+  if(!em || !pw){ tMsg('请输入邮箱和密码', 'err'); return; }
+  tMsg('登录中…');
+  fetch('https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=' + encodeURIComponent(CFG.apiKey), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email: em, password: pw, returnSecureToken: true })
+  }).then(function(r){ return r.json(); }).then(function(d){
+    if(d && d.idToken){
+      teacherToken = d.idToken;
+      $('tPass').value = '';
+      showPanel();
+    }else{
+      tMsg('登录失败：' + errText(d), 'err');
+    }
+  }).catch(function(){ tMsg('网络错误，无法登录', 'err'); });
+}
+
+/* ==========================================================================
+   事件绑定与启动
+   ========================================================================== */
+function bindEvents(){
+  $('nameGo').onclick = function(){
+    var n = ($('nameInput').value || '').trim();
+    if(!n){ showToast('请输入名字'); return; }
+    if(n.length > 24) n = n.slice(0, 24);
+    ST.name = n;
+    lsSet(LS.name, n);
+    enterQuiz();
+  };
+  $('nameInput').addEventListener('keydown', function(e){
+    if(e.key === 'Enter') $('nameGo').click();
+  });
+  $('btnRecheck').onclick = function(){
+    txt('waitTime', '正在检查…');
+    fetchAssignment(function(asg, err){
+      if(err === 'token'){ txt('waitTime', '还是连不上，请检查网络'); return; }
+      if(asg && asg.chars && asg.chars.length){ applyAssignment(asg, true); return; }
+      txt('waitTime', '上次检查：' + fmtTime(Date.now()) + ' · 老师还没布置作业');
+    });
+  };
+  $('teacherEntryWait').onclick = teacherEntryClick;
+  $('teacherEntryQuiz').onclick = teacherEntryClick;
+  $('backToStudent').onclick = backToPractice;
+  $('tLoginBtn').onclick = teacherLogin;
+  $('tPass').addEventListener('keydown', function(e){ if(e.key === 'Enter') teacherLogin(); });
+  $('tEmail').addEventListener('keydown', function(e){ if(e.key === 'Enter') $('tPass').focus(); });
+  $('btnClear').onclick = function(){ SEL = []; syncSel(); };
+  $('btnAll').onclick = function(){
+    SEL = [];
+    LESSONS.forEach(function(l){
+      (l.rec || []).forEach(function(c){ if(WORDS[c] && SEL.indexOf(c) < 0) SEL.push(c); });
+    });
+    syncSel();
+  };
+  $('btnPublish').onclick = publish;
+  $('btnEnd').onclick = endAssignment;
+  $('btnRefresh').onclick = loadStats;
+  $('btnCsv').onclick = exportCsv;
+  $('btnWipe').onclick = wipeResults;
+  $('urlBox').onclick = function(){
+    try{
+      if(navigator.clipboard && navigator.clipboard.writeText){
+        navigator.clipboard.writeText($('urlBox').textContent);
+        showToast('已复制学生网址');
+      }
+    }catch(e){}
+  };
+  document.addEventListener('visibilitychange', function(){
+    if(!document.hidden && VIEW === 'wait') pollAssignment();
+    if(!document.hidden && VIEW === 'quiz') flushQueue();
+  });
+}
+bindEvents();
+if(document.readyState === 'loading'){ document.addEventListener('DOMContentLoaded', bootStudent); }
+else{ bootStudent(); }
+</script>
+</body>
+</html>
